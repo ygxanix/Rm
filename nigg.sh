@@ -4,97 +4,89 @@ case $1 in
 cat > new.c <<'EOF'
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-#define NO_DAYS 7
-#define CHUNK 2
+struct Day {
+    char *dayName;
+    int date;
+    char *activity;
+};
 
-typedef struct {
-    char *NameD;
-    int DateD;
-    char *ActivityD;
-} Day;
+void create(struct Day *day) {
+    day->dayName = (char *)malloc(20);   // 20 chars enough for day names
+    day->activity = (char *)malloc(100); // 100 chars for activity
 
-Day *Calendar;
-
-char *readString(void);
-void readDay(Day *d);
-void display(void);
-
-int main() {
-    Calendar = calloc(NO_DAYS, sizeof(Day));
-    if (!Calendar) {
-        printf("Memory allocation failed\n");
-        return 1;
-    }
-
-    printf("Enter the data for Calendar\n");
-
-    for (int i = 0; i < NO_DAYS; i++) {
-        printf("\n--- Day %d ---\n", i + 1);
-        readDay(&Calendar[i]);
-    }
-
-    display();
-
-    // free memory
-    for (int i = 0; i < NO_DAYS; i++) {
-        free(Calendar[i].NameD);
-        free(Calendar[i].ActivityD);
-    }
-    free(Calendar);
-
-    return 0;
-}
-
-char *readString(void) {
-    int size = CHUNK;
-    int index = 0;
-    char *str = malloc(size);
-
-    if (!str) {
-        printf("Insufficient memory\n");
+    if (day->dayName == NULL || day->activity == NULL) {
+        printf("Memory allocation failed!\n");
         exit(1);
     }
 
-    int ch = getchar();
-    if (ch == '\n') ch = getchar(); // skip newline
-
-    while (ch != '\n' && ch != EOF) {
-        if (index + 1 >= size) {
-            size += CHUNK;
-            str = realloc(str, size);
-            if (!str) {
-                printf("Insufficient memory\n");
-                exit(1);
-            }
-        }
-        str[index++] = ch;
-        ch = getchar();
-    }
-
-    str[index] = '\0';
-    return str;
-}
-
-void readDay(Day *d) {
-    printf("Enter name of the day: ");
-    d->NameD = readString();
+    printf("Enter the day name: ");
+    scanf("%19s", day->dayName);  // safe: limits input to 19 chars + null
 
     printf("Enter the date: ");
-    scanf("%d", &d->DateD);
-    getchar(); // consume newline
+    scanf("%d", &day->date);
 
-    printf("Enter activity description: ");
-    d->ActivityD = readString();
+    // Consume leftover newline from previous scanf
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF); 
+
+    printf("Enter the activity for the day: ");
+    fgets(day->activity, 100, stdin);
+
+    // Remove trailing newline from fgets if present
+    size_t len = strlen(day->activity);
+    if (len > 0 && day->activity[len - 1] == '\n') {
+        day->activity[len - 1] = '\0';
+    }
 }
 
-void display(void) {
-    printf("\n\n======= Calendar =======\n");
-    for (int i = 0; i < NO_DAYS; i++) {
-        printf("\n--- %s (%d) ---\n", Calendar[i].NameD, Calendar[i].DateD);
-        printf("Activity: %s\n", Calendar[i].ActivityD);
+void read(struct Day *calendar, int size) {
+    for (int i = 0; i < size; i++) {
+        printf("\n--- Enter details for Day %d ---\n", i + 1);
+        create(&calendar[i]);
     }
+}
+
+void display(struct Day *calendar, int size) {
+    printf("\n========== Week's Activity Details ==========\n");
+    for (int i = 0; i < size; i++) {
+        printf("Day %d:\n", i + 1);
+        printf("Day Name : %s\n", calendar[i].dayName);
+        printf("Date     : %d\n", calendar[i].date);
+        printf("Activity : %s\n", calendar[i].activity);
+        printf("--------------------------------------------\n");
+    }
+}
+
+void freeMemory(struct Day *calendar, int size) {
+    for (int i = 0; i < size; i++) {
+        free(calendar[i].dayName);
+        free(calendar[i].activity);
+    }
+}
+
+int main() {
+    int size;
+
+    printf("Enter the number of days in the week: ");
+    if (scanf("%d", &size) != 1 || size <= 0 || size > 100) {
+        printf("Invalid input. Please enter a positive number.\n");
+        return 1;
+    }
+
+    struct Day *calendar = (struct Day *)malloc(sizeof(struct Day) * size);
+    if (calendar == NULL) {
+        printf("Memory allocation failed. Exiting program.\n");
+        return 1;
+    }
+
+    read(calendar, size);
+    display(calendar, size);
+
+    freeMemory(calendar, size);
+    free(calendar);
+
+    return 0;
 }
 EOF
 ;;
